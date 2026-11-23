@@ -206,8 +206,40 @@ def overview():
     save(fig, "0_overview.png")
 
 
+def summary_card():
+    """Two-panel summary at 2000 x 1250 px, for cards and social previews."""
+    head = pd.read_csv(RESULTS / "headline_policies.csv").set_index("family")
+    best = pd.read_csv(RESULTS / "best_per_family.csv")
+    fams = ["Moving average + rule", "Holt-Winters + rule", "Holt-Winters + LP"]
+    fig, axes = plt.subplots(1, 2, figsize=(10, 6.25), dpi=200)
+    ax = axes[0]
+    vals = head.loc[fams, "total_cost_usd"]
+    ax.bar(["Moving avg\n+ rule", "Holt-Winters\n+ rule", "Holt-Winters\n+ LP"], vals,
+           color=[COLORS[f] for f in fams], width=0.6)
+    for x, v in enumerate(vals):
+        ax.text(x, v + 8, f"${v:,.0f}", ha="center", fontweight="bold", fontsize=12)
+    ax.set_ylim(0, vals.max() * 1.18)
+    ax.set_ylabel("total cost, $ over 84 days")
+    ax.set_title("Base limits: same fill rate (98.7%)")
+    ax.grid(axis="x", visible=False)
+    ax = axes[1]
+    d = best[best.storage_cap_days == A.STORAGE_CAP]
+    for fam in fams:
+        r = d[d.family == fam].sort_values("delivery_cap_mult")
+        ax.plot(r.delivery_cap_mult, r.total_cost_usd, "o-", color=COLORS[fam], lw=2.2,
+                label=fam.replace("Moving average", "Moving avg"))
+    ax.set_xlabel("delivery limit, x average daily demand")
+    ax.set_title("Tighter deliveries: the LP saves more")
+    ax.set_ylim(0, None)
+    ax.legend(frameon=False, fontsize=9)
+    fig.tight_layout()
+    fig.savefig(FIGURES / "6_summary.png", bbox_inches=None)
+    plt.close(fig)
+
+
 def main():
     overview()
+    summary_card()
     forecast_accuracy()
     forecast_example()
     cost_vs_stock()
