@@ -151,7 +151,63 @@ def where_lp_saves():
     save(fig, "5_where_lp_saves.png")
 
 
+def overview():
+    """One picture for the top of the README."""
+    acc = pd.read_csv(RESULTS / "forecast_accuracy.csv").set_index("model")
+    head = pd.read_csv(RESULTS / "headline_policies.csv").set_index("family")
+    best = pd.read_csv(RESULTS / "best_per_family.csv")
+    fams = ["Moving average + rule", "Holt-Winters + rule", "Holt-Winters + LP"]
+    short = {"Moving average + rule": "Moving avg\n+ rule", "Holt-Winters + rule": "Holt-Winters\n+ rule",
+             "Holt-Winters + LP": "Holt-Winters\n+ LP"}
+
+    fig, axes = plt.subplots(1, 3, figsize=(13, 3.9), gridspec_kw={"width_ratios": [1, 1, 1.35]})
+
+    ax = axes[0]
+    models = ["moving_avg_7", "weekday_avg_4w", "holt_winters"]
+    names = ["7-day\nmoving avg", "Same-weekday\navg, 4 weeks", "Holt-Winters"]
+    vals = acc.loc[models, "wape_daily"]
+    ax.bar(names, vals, color=["#c3c9cf", "#c3c9cf", COLORS["Holt-Winters + rule"]], width=0.6)
+    for x, v in enumerate(vals):
+        ax.text(x, v + 0.005, f"{v:.1%}", ha="center", fontweight="bold")
+    ax.set_ylim(0, vals.max() * 1.2)
+    ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0))
+    ax.set_title("1. Forecast error (WAPE, lower is better)")
+    ax.grid(axis="x", visible=False)
+
+    ax = axes[1]
+    vals = head.loc[fams, "total_cost_usd"]
+    ax.bar([short[f] for f in fams], vals, color=[COLORS[f] for f in fams], width=0.6)
+    for x, v in enumerate(vals):
+        ax.text(x, v + 8, f"${v:,.0f}", ha="center", fontweight="bold")
+    ax.set_ylim(0, vals.max() * 1.2)
+    ax.set_title(f"2. Total cost, base limits (fill rate {head.loc['Holt-Winters + LP', 'fill_rate']:.1%} for all)")
+    ax.set_ylabel("$ over 84 days")
+    ax.grid(axis="x", visible=False)
+
+    ax = axes[2]
+    d = best[best.storage_cap_days == A.STORAGE_CAP]
+    for fam in fams:
+        r = d[d.family == fam].sort_values("delivery_cap_mult")
+        ax.plot(r.delivery_cap_mult, r.total_cost_usd, "o-", color=COLORS[fam], lw=2,
+                label=fam.replace("Moving average", "Moving avg"))
+    tight = d[d.delivery_cap_mult == min(d.delivery_cap_mult)].set_index("family").total_cost_usd
+    cut = tight["Holt-Winters + LP"] / tight["Holt-Winters + rule"] - 1
+    ax.annotate(f"{cut:.0%} cost\nwhen deliveries\nare tight", xy=(min(d.delivery_cap_mult), tight["Holt-Winters + LP"]),
+                xytext=(1.02, 1250), fontsize=9, color=COLORS["Holt-Winters + LP"], fontweight="bold",
+                arrowprops=dict(arrowstyle="->", color=COLORS["Holt-Winters + LP"]))
+    ax.set_xlabel("delivery limit, x average daily demand")
+    ax.set_ylabel("$ over 84 days")
+    ax.set_ylim(0, None)
+    ax.set_title("3. Total cost as delivery capacity changes")
+    ax.legend(frameon=False, fontsize=8.5)
+
+    fig.suptitle("50 Walmart grocery items, 84-day backtest on real daily sales", fontweight="bold", y=1.03)
+    fig.tight_layout()
+    save(fig, "0_overview.png")
+
+
 def main():
+    overview()
     forecast_accuracy()
     forecast_example()
     cost_vs_stock()

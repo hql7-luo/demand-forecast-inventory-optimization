@@ -4,16 +4,25 @@ English | [中文](README.zh.md)
 
 One Walmart store, 50 fast-selling grocery items, two years of real daily sales ([M5 data](#sources)). Every evening the store orders stock that arrives two days later. Only so many units can be delivered per day, and only so many fit in the store. This repo forecasts daily demand with Holt-Winters, decides the orders with a linear program (LP), and replays both against the last 84 days of real sales next to simpler methods.
 
-![Dashboard summary: Holt-Winters + LP vs order-up-to rules](figures/dashboard.png)
+![Overview: forecast error, total cost at base limits, and total cost as delivery capacity changes](figures/0_overview.png)
+
+**Bottom line:** when deliveries or space are tight, which is when a store loses sales, plan all items together with an LP on a good forecast. When there is room to spare, a simple rule on the same forecast does as well. An interactive [dashboard](#dashboard) lets you re-solve the LP for any evening.
 
 ## What I found
 
-- **Holt-Winters is the most accurate of six forecasts.** Daily error (WAPE) is 33.8%, against 39.4% for a 7-day moving average (14% lower) and 36.4% for the best simple method, a same-weekday average. Saturday and Sunday sales run about 30% above average. Holt-Winters learns that weekly pattern and updates its level every day, while the simple methods either ignore the pattern or copy last weeks' noise. It also ranks first in two other stores.
-- **A better forecast alone saves little when capacity binds.** With the same order-up-to rule, switching from the moving average to Holt-Winters cuts total cost from $435 to $426 (2%). About two thirds of lost sales fall on Sunday through Tuesday: weekend demand drains the shelves and the truck runs full for the next two days while stock catches up. A better forecast does not add truck space.
-- **The LP helps most when capacity is tight.** At the base limits (deliveries 5% above average daily demand, 3 days of storage), Holt-Winters + LP loses 10.5% less margin and costs 7.3% less than the best Holt-Winters rule, at the same fill rate (98.7%) and the same stock (1.6 days). When deliveries are cut to 95% of average demand, it costs 29% less ($1,224 vs $1,733). It loses about as many units as the rule (617 vs 614) but chooses which ones: when the truck or the space runs short, the rule cuts every item by the same share, while the LP keeps the biggest sellers in stock and lets the $0.24-margin items run short (figure 5).
-- **It does not always win.** With looser deliveries (1.15x and 1.30x) it still loses a little less margin but sends back more units that do not fit, so it costs 2% to 9% more than the best rule. With 4 days of storage, a rule with a 99.99% target is cheapest: under these costs holding stock is almost free, and the LP's buffers assume normally distributed errors, which understates how often sales spike.
-- **The LP needs the better forecast.** Fed with the moving-average forecast, the same LP cost more than the plain moving-average rule in 5 of 6 capacity settings, mostly from units that did not fit and went back on the truck.
-- **A scenario version of the LP did worse ($700 vs $395).** It planned against 20 demand paths sampled from past forecast errors. A lost sale costs about 600 times more than holding a unit for a day, so the right stock covers rare spikes, and 20 samples rarely include them.
+### 1. Holt-Winters is the most accurate of six forecasts
+
+Daily error (WAPE) is 33.8%, against 39.4% for a 7-day moving average (14% lower) and 36.4% for the best simple method, a same-weekday average. Saturday and Sunday sales run about 30% above average. Holt-Winters learns that weekly pattern and updates its level every day, while the simple methods either ignore the pattern or copy last weeks' noise. It also ranks first in two other stores.
+
+![Daily forecast error of six models](figures/1_forecast_accuracy.png)
+
+### 2. A better forecast alone saves little when capacity binds
+
+With the same order-up-to rule, switching from the moving average to Holt-Winters cuts total cost from $435 to $426 (2%). About two thirds of lost sales fall on Sunday through Tuesday: weekend demand drains the shelves and the truck runs full for the next two days while stock catches up. A better forecast does not add truck space.
+
+### 3. The LP helps most when capacity is tight
+
+At the base limits (deliveries 5% above average daily demand, 3 days of storage), Holt-Winters + LP loses 10.5% less margin and costs 7.3% less than the best Holt-Winters rule, at the same fill rate (98.7%) and the same stock (1.6 days). When deliveries are cut to 95% of average demand, it costs 29% less ($1,224 vs $1,733). It loses about as many units as the rule (617 vs 614) but chooses which ones: when the truck or the space runs short, the rule cuts every item by the same share, while the LP keeps the biggest sellers in stock and lets the $0.24-margin items run short (chart below).
 
 Base limits, 50 items, 84 test days (February 29 to May 22, 2016):
 
@@ -24,6 +33,14 @@ Base limits, 50 items, 84 test days (February 29 to May 22, 2016):
 | **Holt-Winters + LP** | none | 98.71% | **$293** | $72 | $30 | **$395** | 1.58 days |
 
 Each rule uses the target (out of 90% to 99.99%) with the lowest total cost, picked after seeing the test window. That is the rules' best case; the LP has nothing to tune.
+
+![Same stock, less margin lost](figures/3_cost_vs_stock.png)
+
+![Where the LP saves: lost margin per item, LP minus the best rule](figures/5_where_lp_saves.png)
+
+### 4. It does not always win
+
+With looser deliveries (1.15x and 1.30x) the LP still loses a little less margin but sends back more units that do not fit, so it costs 2% to 9% more than the best rule. With 4 days of storage, a rule with a 99.99% target is cheapest: under these costs holding stock is almost free, and the LP's buffers assume normally distributed errors, which understates how often sales spike.
 
 Total cost under other limits (same 84 days):
 
@@ -38,13 +55,12 @@ Total cost under other limits (same 84 days):
 
 Two more stores, base limits: in TX_1 (40 items) the LP costs $205 against $209 for the best Holt-Winters rule (-2%) and $225 for the moving-average rule; in WI_1 (37 items), $153 against $161 (-5%) and $187.
 
-So: when deliveries or space are tight, which is when a store loses sales, plan all items together with an LP on a good forecast. When there is room to spare, a simple rule on the same forecast does as well.
-
-![Same stock, less margin lost](figures/3_cost_vs_stock.png)
-
 ![Total cost as delivery and storage limits change](figures/4_capacity.png)
 
-![Where the LP saves: lost margin per item, LP minus the best rule](figures/5_where_lp_saves.png)
+### 5. Two things that did not work
+
+- **The LP on a weaker forecast.** Fed with the moving-average forecast, the same LP cost more than the plain moving-average rule in 5 of 6 capacity settings, mostly from units that did not fit and went back on the truck.
+- **A scenario version of the LP ($700 vs $395).** It planned against 20 demand paths sampled from past forecast errors. A lost sale costs about 600 times more than holding a unit for a day, so the right stock covers rare spikes, and 20 samples rarely include them.
 
 ## How it works
 
@@ -89,6 +105,10 @@ streamlit run app/streamlit_app.py
 ```
 
 Five tabs: summary, forecasts per item, stock and deliveries per policy, capacity what-ifs, and re-solving the LP for any evening with your own delivery and storage limits.
+
+![Dashboard summary tab](figures/dashboard.png)
+
+![Dashboard: re-solve the LP for one evening](figures/dashboard_plan.png)
 
 ## Run it
 
