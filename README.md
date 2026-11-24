@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-**[Try the live demo](https://hql7-luo.github.io/demos/replenishment/)**: pick an evening, change the delivery and storage limits, and the LP re-plans all 50 items in your browser (HiGHS compiled to WebAssembly). Then replay the next 7 days on real sales against the order-up-to rule. No sign-in.
+**[Try the live demo](https://hql7-luo.github.io/demos/replenishment/)**: pick an evening, change the delivery and storage limits, and the LP re-plans all 50 items in your browser (HiGHS compiled to WebAssembly). Then replay the next 7 days on real sales against the order-up-to rule. It opens with tight storage (2.5 days); across all 77 seven-day windows the LP was cheaper in 60 at that setting, 47 with tight deliveries and 36 at the base limits. No sign-in.
 
 One Walmart store, 50 fast-selling grocery items, two years of real daily sales ([M5 data](#sources)). Every evening the store orders stock that arrives two days later. Only so many units can be delivered per day, and only so many fit in the store. This repo forecasts daily demand with Holt-Winters, decides the orders with a linear program (LP), and replays both against the last 84 days of real sales next to simpler methods.
 

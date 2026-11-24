@@ -194,7 +194,8 @@ def main():
 
     # Every 7-day window in the test period, so a single replayed week can be put in context.
     weekly = []
-    for setting, dm, sd in [("base", A.DELIVERY_CAP, A.STORAGE_CAP), ("tight_delivery", 0.95, A.STORAGE_CAP)]:
+    for setting, dm, sd in [("base", A.DELIVERY_CAP, A.STORAGE_CAP), ("tight_delivery", 0.95, A.STORAGE_CAP),
+                            ("tight_storage", A.DELIVERY_CAP, 2.5)]:
         Kw, Cw = dm * avg_total, sd * avg_total
         diffs, rule_total = [], 0.0
         for s in range(len(evenings) - REPLAY_DAYS + 1):
