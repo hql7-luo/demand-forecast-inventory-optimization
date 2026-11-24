@@ -2,6 +2,8 @@
 
 [English](README.md) | 中文
 
+**[试用实时 Demo](https://hql7-luo.github.io/demos/replenishment/?lang=zh)**：选一个晚上，调整送货和库存上限，LP 会在你的浏览器里为 50 个商品重新规划订货（HiGHS 编译成 WebAssembly）。还可以用真实销量回放接下来 7 天，和补货规则对比。不用登录。
+
 一家 Walmart 门店，50 个畅销食品，两年真实日销量（[M5 数据](#数据和参考)）。门店每晚下单，货两天后到。每天能送到的件数有上限，店里能放下的件数也有上限。这个项目用 Holt-Winters 预测每日需求，用线性规划（LP）决定订货量，再拿最后 84 天的真实销量，把它和更简单的做法放在一起回放比较。
 
 ![总览：预测误差、基准容量下的总成本、送货容量变化时的总成本](figures/0_overview.png)
@@ -119,13 +121,18 @@ python src/run_all.py --refit   # 预测（4 核约 3 分钟）+ 所有策略模
 python src/robustness.py        # 在 TX_1、WI_1 两家门店上重复
 python src/make_figures.py
 pytest
+python scripts/build_web_demo.py   # 生成 web_demo/ 里的 demo 数据（约 2 分钟）
+node web_demo/check_demo.cjs       # 浏览器里的 LP 必须和 Python 一致
 ```
 
-`data/processed/` 和 `results/` 已经放在仓库里，不下载数据也能跑测试、出图、开 dashboard。每次 push，CI 会跑测试并在基准容量下重跑一遍策略。
+`data/processed/` 和 `results/` 已经放在仓库里，不下载数据也能跑测试、出图、开 dashboard。每次 push，CI 会跑测试、在基准容量下重跑一遍策略，并检查浏览器 demo 和 Python 的结果是否一致。
+
+[实时 Demo](https://hql7-luo.github.io/demos/replenishment/?lang=zh) 就是 `web_demo/` 里的静态网页：同一个 LP 用 JavaScript 重写（`web_demo/model.js`），用 [highs-js](https://github.com/lovasoa/highs-js) 1.16.0（MIT）求解，和这里 PuLP 用的是同一版 HiGHS。在 6 个测试晚上，它求出的最优成本和 Python 相同；规则的订单和回放完全一致。部分 LP 回放会不同，因为 LP 可能有多个同样最优的方案，两边可能选了不同的那个。
 
 ## 数据和参考
 
 - M5 Forecasting 竞赛数据（Walmart；University of Nicosia），从 [Nixtla 的副本](https://github.com/Nixtla/m5-forecasts) 下载。Makridakis, Spiliotis and Assimakopoulos (2022), "M5 accuracy competition: Results, findings, and conclusions," *International Journal of Forecasting* 38(4)。
+- [highs-js](https://github.com/lovasoa/highs-js)（MIT）在浏览器里运行 HiGHS，用于 demo。
 - [statsmodels ExponentialSmoothing](https://www.statsmodels.org/stable/generated/statsmodels.tsa.holtwinters.ExponentialSmoothing.html)、[PuLP](https://coin-or.github.io/pulp/)、[HiGHS](https://highs.dev/)。
 
 借助 AI 编程工具完成。

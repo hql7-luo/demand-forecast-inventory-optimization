@@ -2,6 +2,8 @@
 
 English | [中文](README.zh.md)
 
+**[Try the live demo](https://hql7-luo.github.io/demos/replenishment/)**: pick an evening, change the delivery and storage limits, and the LP re-plans all 50 items in your browser (HiGHS compiled to WebAssembly). Then replay the next 7 days on real sales against the order-up-to rule. No sign-in.
+
 One Walmart store, 50 fast-selling grocery items, two years of real daily sales ([M5 data](#sources)). Every evening the store orders stock that arrives two days later. Only so many units can be delivered per day, and only so many fit in the store. This repo forecasts daily demand with Holt-Winters, decides the orders with a linear program (LP), and replays both against the last 84 days of real sales next to simpler methods.
 
 ![Overview: forecast error, total cost at base limits, and total cost as delivery capacity changes](figures/0_overview.png)
@@ -119,13 +121,18 @@ python src/run_all.py --refit   # forecasts (about 3 minutes on 4 cores) + all p
 python src/robustness.py        # the same on stores TX_1 and WI_1
 python src/make_figures.py
 pytest
+python scripts/build_web_demo.py   # browser demo data in web_demo/ (about 2 minutes)
+node web_demo/check_demo.cjs       # the browser LP must match Python
 ```
 
-`data/processed/` and `results/` are in the repo, so the tests, the figures and the dashboard run without the download. CI runs the tests and re-runs the policies at the base limits on every push.
+`data/processed/` and `results/` are in the repo, so the tests, the figures and the dashboard run without the download. CI runs the tests, re-runs the policies at the base limits and checks the browser demo against Python on every push.
+
+The [live demo](https://hql7-luo.github.io/demos/replenishment/) is the static site in `web_demo/`: the same LP written in JavaScript (`web_demo/model.js`) and solved by [highs-js](https://github.com/lovasoa/highs-js) 1.16.0 (MIT), the same HiGHS version PuLP uses here. On six test evenings it reaches the same optimal cost as Python; rule orders and rule replays match exactly. Some LP replays differ because the LP can have several optimal plans and the two front ends may pick different ones.
 
 ## Sources
 
 - M5 Forecasting competition data (Walmart; University of Nicosia), downloaded from [Nixtla's copy](https://github.com/Nixtla/m5-forecasts). Makridakis, Spiliotis and Assimakopoulos (2022), "M5 accuracy competition: Results, findings, and conclusions," *International Journal of Forecasting* 38(4).
+- [highs-js](https://github.com/lovasoa/highs-js) (MIT) runs HiGHS in the browser for the demo.
 - [statsmodels ExponentialSmoothing](https://www.statsmodels.org/stable/generated/statsmodels.tsa.holtwinters.ExponentialSmoothing.html), [PuLP](https://coin-or.github.io/pulp/), [HiGHS](https://highs.dev/).
 
 Built with help from AI coding tools.
